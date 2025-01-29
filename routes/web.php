@@ -27,8 +27,6 @@ Route::get('/', function () {
 });
 Route::get('logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);
 
-
-
 Route::group(['middleware' => 'guest'], function () {
         Route::get('login', [AuthController::class, 'login'])->name('login');
         Route::post('login', [AuthController::class, 'postLogin'])->name('postLogin');
@@ -39,6 +37,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('employee', [EmployeeController::class, 'store'])->name('employee.store');
     Route::get('/employee', [EmployeeController::class, 'index'])->name('employee.index');
     Route::get('/leads', [LeadController::class, 'index'])->name('home');
+    Route::post('/leads', [LeadController::class, 'store'])->name('lead.store');
     Route::get('/leads/{id}/edit', [LeadController::class, 'edit'])->name('lead.edit');
     Route::put('/leads/{id}', [LeadController::class, 'update']);
     Route::get('/lead/updates', [LeadUpdateController::class, 'index'])->name('leads.update');

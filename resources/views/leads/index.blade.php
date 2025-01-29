@@ -3,7 +3,7 @@
 @section('extra_css')
 <style>
     .btn-group button {
-    margin-right: 5px; /* Adds space between buttons */
+    margin-right: 5px;
     }
 
     .updateLeadBtn {
@@ -66,7 +66,10 @@
 <div class="row justify-content-center mt-5">
     <div class="col-md-12">
         <div class="card">
-            <div class="card-header">Leads</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Leads</span>
+                <button class="btn btn-primary" data-bs-toggle="modal" id="addLead" data-bs-target="#addLeadModal">Add Leads</button>
+            </div>
             <div class="card-body">
             <!-- DataTable -->
             <table id="leads-table" class="display">
@@ -90,6 +93,60 @@
         </div>
     </div>
 </div>
+
+<!-- Add Lead Modal -->
+<div class="modal fade" id="addLeadModal" tabindex="-1" role="dialog" aria-labelledby="addLeadModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addLeadModalLabel">Add Lead</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    {{-- <span aria-hidden="true">&times;</span> --}}
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addLeadForm">
+                    <input type="hidden" id="lead_id">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" class="form-control" id="add_lead_name">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="text" class="form-control" id="add_lead_email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mobile</label>
+                        <input type="text"  class="form-control" id="add_lead_mobile" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea class="form-control" id="add_lead_description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Source</label>
+                        <input type="text" class="form-control" id="add_lead_source" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select class="form-control" id="add_lead_status" required>
+                            <option value="new">New</option>
+                            <option value="accepted">Accepted</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="invalid">Invalid</option>
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary updateLeadBtn">Add Lead</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Edit Lead Modal -->
 <div class="modal fade" id="editLeadModal" tabindex="-1" role="dialog" aria-labelledby="editLeadModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -200,6 +257,8 @@
     $(document).ready(function() {
         var table;
         var isAdmin = @json(Auth::user()->isAdmin());
+        const mobilePattern = /^[0-9]{7,15}$/;
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         initDataTable();
     function showSuccessNotification(title,text) {
         Swal.fire({
@@ -211,7 +270,7 @@
         });
     }
 
-        function initDataTable() {
+    function initDataTable() {
 
      table = $('#leads-table').DataTable({
         processing: true,
@@ -258,192 +317,328 @@
         columnDefs: [
         { targets: [3], visible: false }
     ],
-    order: [[3, 'desc']]
-    });
-
-}
-
-$('#leads-table').on('click', '.edit-lead', function() {
-        var leadId = $(this).data('id');
-
-        // Fetch Lead Data from API
-        $.ajax({
-            url: `/leads/${leadId}/edit`,
-            type: 'GET',
-            success: function(response) {
-                $('#lead_id').val(response.id);
-                $('#lead_email').val(response.email);
-                $('#lead_mobile').val(response.mobile);
-                $('#lead_name').val(response.name);
-                $('#lead_description').val(response.description);
-                $('#lead_source').val(response.source);
-                $('#lead_status').val(response.status);
-
-                // Show the Modal
-                $('#editLeadModal').modal('show');
-            }
+        order: [[3, 'desc']]
         });
+
+    }
+
+    $('#addLead').click( function() {
+        $('#add_lead_email').val('');
+        $('#add_lead_mobile').val('');
+        $('#add_lead_name').val('');
+        $('#add_lead_description').val('');
+        $('#add_lead_source').val('');
+        $('#addLeadModal').modal('show');
     });
 
-    $('#editLeadForm').on('submit', function(event) {
-    event.preventDefault();
+    $('#addLeadForm').on('submit', function(event) {
+            event.preventDefault();
 
-    // Clear any previous error messages
-    $('.error-message').remove();
+        // Clear any previous error messages
+        $('.error-message').remove();
 
-    // Get the values of the fields
-    var leadId = $('#lead_id').val();
-    var leadName = $('#lead_name').val().trim();
-    var leadDescription = $('#lead_description').val().trim();
-    var leadSource = $('#lead_source').val().trim();
-    var leadStatus = $('#lead_status').val().trim();
+        // Get the values of the fields
+        var leadId = $('#add_lead_id').val();
+        var leadName = $('#add_lead_name').val().trim();
+        var leadEmail = $('#add_lead_email').val().trim();
+        var leadMobile = $('#add_lead_mobile').val().trim();
 
-    var isValid = true;
+        var leadDescription = $('#add_lead_description').val().trim();
+        var leadSource = $('#add_lead_source').val().trim();
+        var leadStatus = $('#add_lead_status').val().trim();
 
-    // Basic Validation to check if fields are not empty
-    if (!leadName) {
-        isValid = false;
-        $('#lead_name').after('<span class="error-message text-danger">This field is required.</span>');
-    } else if (leadName.length > 20) {
-        isValid = false;
-        $('#lead_name').after('<span class="error-message text-danger">Name cannot be more than 20 characters.</span>');
-    }
+        var isValid = true;
 
-    if (!leadDescription) {
-        isValid = false;
-        $('#lead_description').after('<span class="error-message text-danger">This field is required.</span>');
-    }
-    else if (leadDescription.length < 50) {
-        isValid = false;
-        $('#lead_description').after('<span class="error-message text-danger">Description cannot be less than 50 characters.</span>');
-    }
+        // Basic Validation to check if fields are not empty
+        if (!leadName) {
+            isValid = false;
+            $('#add_lead_name').after('<span class="error-message text-danger">This field is required.</span>');
+        } else if (leadName.length > 20) {
+            isValid = false;
+            $('#add_lead_name').after('<span class="error-message text-danger">Name cannot be more than 20 characters.</span>');
+        } else if (leadName.length < 5) {
+            isValid = false;
+            $('#add_lead_name').after('<span class="error-message text-danger">Name cannot be less than 5 characters.</span>');
+        }
 
-    if (!leadSource) {
-        isValid = false;
-        $('#lead_source').after('<span class="error-message text-danger">This field is required.</span>');
-    }
+        if (!leadDescription) {
+            isValid = false;
+            $('#add_lead_description').after('<span class="error-message text-danger">This field is required.</span>');
+        }
+        else if (leadDescription.length < 50) {
+            isValid = false;
+            $('#add_lead_description').after('<span class="error-message text-danger">Description cannot be less than 50 characters.</span>');
+        }
+        else if (leadDescription.length > 500) {
+            isValid = false;
+            $('#add_lead_description').after('<span class="error-message text-danger">Description cannot be more than 500 characters.</span>');
+        }
 
-    if (!leadStatus) {
-        isValid = false;
-        $('#lead_status').after('<span class="error-message text-danger">This field is required.</span>');
-    }
+        if (!leadEmail) {
+            isValid = false;
+            $('#add_lead_email').after('<span class="error-message text-danger">This field is required.</span>');
+        }else if (!emailPattern.test(leadEmail)) {
+            $('#add_lead_email').after('<span class="error-message text-danger">Enter a valid email address.</span>');
+            isValid = false;
+        }
 
-    // If any field is empty, prevent form submission
-    if (!isValid) {
-        return;
-    }
+        if (!leadMobile) {
+            isValid = false;
+            $('#add_lead_mobile').after('<span class="error-message text-danger">This field is required.</span>');
+        }else if (!mobilePattern.test(leadMobile)) {
+            $('#add_lead_mobile').after('<span class="error-message text-danger">Mobile must be between 7 and 15 digits.</span>');
+            isValid = false;
+        }
 
-    var formData = {
-        name: leadName,
-        description: leadDescription,
-        source: leadSource,
-        status: leadStatus,
-        _token: '{{ csrf_token() }}'
-    };
+        if (!leadSource) {
+            isValid = false;
+            $('#add_lead_source').after('<span class="error-message text-danger">This field is required.</span>');
+        } else if (leadSource.length > 20) {
+            isValid = false;
+            $('#add_lead_source').after('<span class="error-message text-danger">Source cannot be more than 20 characters.</span>');
+        } else if (leadSource.length < 5) {
+            isValid = false;
+            $('#add_lead_source').after('<span class="error-message text-danger">Source cannot be less than 5 characters.</span>');
+        }
 
-        // Proceed with the AJAX request if validation passes
+        if (!leadStatus) {
+            isValid = false;
+            $('#add_lead_status').after('<span class="error-message text-danger">This field is required.</span>');
+        }
+
+        // If any field is empty, prevent form submission
+        if (!isValid) {
+            return;
+        }
+
+        var formData = {
+            name: leadName,
+            email: leadEmail,
+            mobile: leadMobile,
+            description: leadDescription,
+            source: leadSource,
+            status: leadStatus,
+            _token: '{{ csrf_token() }}'
+        };
+
         $.ajax({
-            url: `/leads/${leadId}`,
-            type: 'PUT',
+            url: '{{route("lead.store")}}',
+            type: 'POST',
             data: formData,
             success: function(response) {
-                $('#editLeadModal').modal('hide');
-                showSuccessNotification('Lead Edited','The lead information has been updated successfully.');
+                $('#addLeadModal').modal('hide');
+                showSuccessNotification('Lead Added','The lead information has been added successfully.');
                 table.ajax.reload(null, false);
             },
             error: function(error) {
-                Swal.fire('Error!', 'Something went wrong.', 'error');
+            try {
+                Swal.fire('Error!', error.responseJSON.message, 'error');
+                } catch (error) {
+                alert('Error adding employee');
+                }
             }
         });
     });
 
+    $('#leads-table').on('click', '.edit-lead', function() {
+            var leadId = $(this).data('id');
 
-    $(document).on('click', '.post-update', function() {
-    const leadId = $(this).data('id');
+            $.ajax({
+                url: `/leads/${leadId}/edit`,
+                type: 'GET',
+                success: function(response) {
+                    $('#lead_id').val(response.id);
+                    $('#lead_email').val(response.email);
+                    $('#lead_mobile').val(response.mobile);
+                    $('#lead_name').val(response.name);
+                    $('#lead_description').val(response.description);
+                    $('#lead_source').val(response.source);
+                    $('#lead_status').val(response.status);
 
-    $('#leadMessage').val('');
-    $('#postUpdateModal').modal('show');
-    $('#postUpdateForm').data('lead-id', leadId);
-});
+                    // Show the Modal
+                    $('#editLeadModal').modal('show');
+                }
+            });
+        });
 
-$('#saveUpdateBtn').on('click', function() {
-    const leadId = $('#postUpdateForm').data('lead-id');
-    const leadMessage = $('#leadMessage').val();
-    $('.error-message').remove();
-    var isMessageValid = true;
-    if (!leadMessage) {
-        isMessageValid = false;
-        $('#leadMessage').after('<span class="error-message text-danger">This field is required.</span>');
-    }
-    else if (leadMessage.length < 50) {
-        isMessageValid = false;
-        $('#leadMessage').after('<span class="error-message text-danger">Message cannot be less than 20 characters.</span>');
-    }
-    if (!isMessageValid) {
-        return;
-    }
-    $.ajax({
-        url: '{{ route("leads.update.store") }}',
-        method: 'POST',
-        data: {
-            lead_id: leadId,
-            lead_message: leadMessage,
-            _token: '{{ csrf_token() }}'
-        },
-        success: function(response) {
-            showSuccessNotification('Lead Update','The lead message has been saved successfully.');
+        $('#editLeadForm').on('submit', function(event) {
+            event.preventDefault();
 
-            $('#postUpdateModal').modal('hide');
-        },
-        error: function(error) {
-            Swal.fire('Error!', 'Something went wrong.', 'error');
-        }
-    });
-});
-$(document).on('click', '.view-updates', function() {
-    const leadId = $(this).data('id');
+            // Clear any previous error messages
+            $('.error-message').remove();
 
-    $.ajax({
-        url: '{{route("leads.update")}}',
-        method: 'GET',
-        data: { lead_id: leadId },
-        success: function(response) {
-            if (Array.isArray(response)) {
-                let updates = '';
-                response.forEach(function(update) {
-                    const formattedTimestamp = new Date(update.created_at).toLocaleString();
+            // Get the values of the fields
+            var leadId = $('#lead_id').val();
+            var leadName = $('#lead_name').val().trim();
+            var leadDescription = $('#lead_description').val().trim();
+            var leadSource = $('#lead_source').val().trim();
+            var leadStatus = $('#lead_status').val().trim();
 
-                    updates += `
-                        <div class="row mb-2">
-                            <div class="col-6">
-                                <p>${update.lead_message}</p>
-                            </div>
-                            <div class="col-3">
-                                <p>${update.user.name}</p>
-                            </div>
-                            <div class="col-3">
-                                <p>${formattedTimestamp}</p>
-                            </div>
-                        </div>`;
-                });
+            var isValid = true;
 
-                $('#updatesList').html(updates);
-
-                const updatesContainer = $('#updatesList')[0];
-                updatesContainer.scrollTop = updatesContainer.scrollHeight;
-
-                $('#viewUpdatesModal').modal('show');
-            } else {
-                alert('Updates not found or invalid data structure');
+            // Basic Validation to check if fields are not empty
+            if (!leadName) {
+                isValid = false;
+                $('#lead_name').after('<span class="error-message text-danger">This field is required.</span>');
+            } else if (leadName.length > 20) {
+                isValid = false;
+                $('#lead_name').after('<span class="error-message text-danger">Name cannot be more than 20 characters.</span>');
+            } else if (leadName.length < 5) {
+                isValid = false;
+                $('#lead_name').after('<span class="error-message text-danger">Name cannot be less than 5 characters.</span>');
             }
-        },
-        error: function(error) {
-            alert('Error fetching lead updates:', error);
-        }
-    });
-});
 
-});
+            if (!leadDescription) {
+                isValid = false;
+                $('#lead_description').after('<span class="error-message text-danger">This field is required.</span>');
+            }
+            else if (leadDescription.length < 50) {
+                isValid = false;
+                $('#lead_description').after('<span class="error-message text-danger">Description cannot be less than 50 characters.</span>');
+            } else if (leadDescription.length > 500) {
+                isValid = false;
+                $('#lead_description').after('<span class="error-message text-danger">Description cannot be more than 500 characters.</span>');
+            }
+
+            if (!leadSource) {
+                isValid = false;
+                $('#lead_source').after('<span class="error-message text-danger">This field is required.</span>');
+            } else if (leadSource.length > 20) {
+                isValid = false;
+                $('#lead_source').after('<span class="error-message text-danger">Source cannot be more than 20 characters.</span>');
+            } else if (leadSource.length < 5) {
+                isValid = false;
+                $('#lead_source').after('<span class="error-message text-danger">Source cannot be less than 5 characters.</span>');
+            }
+
+            if (!leadStatus) {
+                isValid = false;
+                $('#lead_status').after('<span class="error-message text-danger">This field is required.</span>');
+            }
+
+            // If any field is empty, prevent form submission
+            if (!isValid) {
+                return;
+            }
+
+            var formData = {
+                name: leadName,
+                description: leadDescription,
+                source: leadSource,
+                status: leadStatus,
+                _token: '{{ csrf_token() }}'
+            };
+
+                // Proceed with the AJAX request if validation passes
+                $.ajax({
+                    url: `/leads/${leadId}`,
+                    type: 'PUT',
+                    data: formData,
+                    success: function(response) {
+                        $('#editLeadModal').modal('hide');
+                        showSuccessNotification('Lead Edited','The lead information has been updated successfully.');
+                        table.ajax.reload(null, false);
+                    },
+                    error: function(error) {
+                        try {
+                        Swal.fire('Error!', error.responseJSON.message, 'error');
+                        } catch (error) {
+                        alert('Error adding employee');
+                        }
+                    }
+                });
+            });
+
+
+        $(document).on('click', '.post-update', function() {
+            const leadId = $(this).data('id');
+
+            $('#leadMessage').val('');
+            $('#postUpdateModal').modal('show');
+            $('#postUpdateForm').data('lead-id', leadId);
+        });
+
+        $('#saveUpdateBtn').on('click', function() {
+            const leadId = $('#postUpdateForm').data('lead-id');
+            const leadMessage = $('#leadMessage').val();
+            $('.error-message').remove();
+            var isMessageValid = true;
+            if (!leadMessage) {
+                isMessageValid = false;
+                $('#leadMessage').after('<span class="error-message text-danger">This field is required.</span>');
+            }
+            else if (leadMessage.length < 20) {
+                isMessageValid = false;
+                $('#leadMessage').after('<span class="error-message text-danger">Message cannot be less than 20 characters.</span>');
+            } else if (leadMessage.length > 500) {
+                isMessageValid = false;
+                $('#leadMessage').after('<span class="error-message text-danger">Message cannot be more than 500 characters.</span>');
+            }
+            if (!isMessageValid) {
+                return;
+            }
+            $.ajax({
+                url: '{{ route("leads.update.store") }}',
+                method: 'POST',
+                data: {
+                    lead_id: leadId,
+                    lead_message: leadMessage,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    showSuccessNotification('Lead Update','The lead message has been saved successfully.');
+
+                    $('#postUpdateModal').modal('hide');
+                },
+                error: function(error) {
+                    Swal.fire('Error!', 'Something went wrong.', 'error');
+                }
+            });
+        });
+
+        $(document).on('click', '.view-updates', function() {
+            const leadId = $(this).data('id');
+
+            $.ajax({
+                url: '{{route("leads.update")}}',
+                method: 'GET',
+                data: { lead_id: leadId },
+                success: function(response) {
+                    if (Array.isArray(response)) {
+                        let updates = '';
+                        response.forEach(function(update) {
+                            const formattedTimestamp = new Date(update.created_at).toLocaleString();
+
+                            updates += `
+                                <div class="row mb-2">
+                                    <div class="col-6">
+                                        <p>${update.lead_message}</p>
+                                    </div>
+                                    <div class="col-3">
+                                        <p>${update.user.name}</p>
+                                    </div>
+                                    <div class="col-3">
+                                        <p>${formattedTimestamp}</p>
+                                    </div>
+                                </div>`;
+                        });
+
+                        $('#updatesList').html(updates);
+
+                        const updatesContainer = $('#updatesList')[0];
+                        updatesContainer.scrollTop = updatesContainer.scrollHeight;
+
+                        $('#viewUpdatesModal').modal('show');
+                    } else {
+                        alert('Updates not found or invalid data structure');
+                    }
+                },
+                error: function(error) {
+                    alert('Error fetching lead updates:', error);
+                }
+            });
+        });
+    });
 
 </script>
 @endsection

@@ -26,9 +26,9 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'   => 'required|string|max:30',
+            'name'   => 'required|string|min:5|max:30',
             'email' => 'required|max:255|unique:users,email',
-            'password' => 'required|min:8|confirmed',
+            'password' => 'required|min:8|max:50|confirmed',
             'password_confirmation' => 'required',
 
         ]);

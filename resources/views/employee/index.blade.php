@@ -138,14 +138,14 @@
         });
 
         function showSuccessNotification(title,text) {
-        Swal.fire({
-            icon: 'success',
-            title: title,
-            text: text,
-            showConfirmButton: false,
-            timer: 2000 // Auto close after 1.5 seconds
-        });
-    }
+            Swal.fire({
+                icon: 'success',
+                title: title,
+                text: text,
+                showConfirmButton: false,
+                timer: 2000 // Auto close after 1.5 seconds
+            });
+        }
     });
 </script>
 @endsection

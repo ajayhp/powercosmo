@@ -20,7 +20,7 @@ class LeadFactory extends Factory
             'name' => $this->faker->name(),
             'email' => $this->faker->unique()->safeEmail(),
             'mobile' => $this->faker->phoneNumber(),
-            'description' => $this->faker->sentence(),
+            'description' => $this->faker->text(60),
             'source' => $this->faker->word(),
             'status' => $this->faker->randomElement(['new', 'accepted', 'completed', 'rejected', 'invalid']),
         ];
